@@ -1,0 +1,258 @@
+{% load static %}
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'fontawesome-free/css/all.min.css' %}">
+
+    <title>Welcome {{user|title}}</title>
+    <style>
+    .badge {
+        display: inline-block;
+        padding: .35em .65em;
+        font-size: .75em;
+        font-weight: 700;
+        line-height: 1;
+        color: #ff6400;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: .25rem;
+    }
+    #chat-heading {
+        display: table;
+        margin: 0 auto;
+
+    }
+
+    #horizontal-heading {
+        display: inline;
+    }
+</style>
+</head>
+
+<body>
+    <div class='container'>
+        <div class="row d-flex justify-content-center">
+            <div>
+                {% comment %} {% include 'notifications.html' %}  {% endcomment %}
+                <div id="active_alert_box" class="alert alert-success" role="alert"
+                style="align-items: center; justify-content: center; text-align: center;">
+
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">  X</span></button>
+                </div>
+            </div>
+            <div class="col-8">
+                <form>
+                    <div class="form-group">
+                        <div id='chat-heading'>
+                            <div class="horizontal-heading">
+                                <label for='textArea' class='h4 pt-5'>Chatroom: {{group_name|safe}}</label>
+                                <a class="nav-link" href="#" id="alertsDropdown" role="button" data-toggle="dropdown"
+                                aria-haspopup="true" aria-expanded="false"
+                                style="align-items: center; justify-content: center; text-align: center;">
+                                <i class="fas fa-user fa-fw"></i>
+                                    <sup>
+                                        <span id="online-users" class="badge badge-danger badge-counter">0</span>
+                                    </sup>
+                                    
+                                </a>
+                            </div>
+                        </div>
+                        <textarea class="form-control" id='chat-text' cols="50" rows="20"> </textarea><br>
+                    </div>
+                    <div class="form-group ">
+                        <input class="form-control" id='input' type='text' size='80'><br>
+                    </div>
+                    <input class="btn btn-secondary btn-lg btn-block" id='submit' type='button' value='Send'><br>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{ room_name|json_script:"room-name" }}
+    {{ request.user.username|json_script:"user_username" }}
+    <!-- Optional JavaScript; choose one of the two! -->
+
+    <!-- Option 1: jQuery and Bootstrap Bundle (includes Popper) -->
+    <script src="{% static 'js/jquery.min.js' %}"></script>
+    <script src="{% static 'js/popper.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'fontawesome-free/js/all.min.js' %}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js" integrity="sha512-B4skI5FiLurS86aioJx9VfozI1wjqrn6aTdJH+YQUmCZum/ZibPBTX55k5d9XM6EsKePDInkLVrN7vPmJxc1qA==" crossorigin="anonymous"></script>
+    <script src="{% static 'js/reconnecting-websocket.min.js' %}"></script>
+
+    <!-- Option 2: jQuery, Popper.js, and Bootstrap JS
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js " integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj " crossorigin="anonymous "></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js " integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN " crossorigin="anonymous "></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js " integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s " crossorigin="anonymous "></script>
+    -->
+    <script>
+        const roomName = JSON.parse(document.getElementById('room-name').textContent);
+        const user_userName = JSON.parse(document.getElementById('user_username').textContent);
+
+        document.querySelector('#submit').onclick = function(e) {
+            const messageInputDom = document.querySelector('#input');
+            const message = messageInputDom.value;
+            chatSocket.send(JSON.stringify({
+                'message': {
+                    'text': message,            
+                    'username': user_userName,
+                }
+            }));
+            console.log(user_userName);
+            messageInputDom.value = '';
+        };
+
+        $('form').submit(
+             function(e) {
+                 e.preventDefault();
+                const messageInputDom = document.querySelector('#input');
+                const message = messageInputDom.value;
+                chatSocket.send(JSON.stringify({
+                    'message': {
+                    'text': message,            
+                    'username': user_userName,
+                }
+                }));
+            console.log(user_userName);
+
+                messageInputDom.value = '';
+             }
+        );
+            
+    ///////////////////////////////////////////////////////////////////
+
+        const chatSocket = new ReconnectingWebSocket(
+            'ws://' +
+            window.location.host +
+            '/ws/chat/' +
+            roomName +
+            '/'
+        );
+
+    ///////////////////////////////////////////////////////////////////
+    
+
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data['event'] == "Message"){
+                console.log(data);
+                user = '';
+                if (data.username == user_userName){
+                    user = 'You';
+                }
+                else {
+                    user = data.username;
+                }
+                document.querySelector('#chat-text').value += (user  + ': ' + data.message + '\n');
+            }
+            if (data['event'] == "Change Status"){
+                console.log(data);
+                $('#online-users').text(data['users_count']);
+                if (data.is_connected == true) {
+                    last_user_joined = '';
+                    console.log(data.last_joined.toLowerCase(), user_userName.toLowerCase());
+                    if (data.last_joined.toLowerCase() == user_userName.toLowerCase()){
+                        last_user_joined = 'You';
+                    }
+                    else {
+                        last_user_joined = data.last_joined;
+                    }
+                    $("#active_alert_box").text(`${last_user_joined} just joined the {{group_name|title}} chatroom!`);
+                }
+                else {
+                    $("#active_alert_box").text(`${data.last_joined} just left chatroom!`);
+                }
+                
+                $(".alert").fadeTo(0, 5000)
+                $(".alert").css("display", "block");
+                $(".alert").scroll()
+                
+                window.setTimeout(function() {
+                    $(".alert").fadeTo(500, 0).slideUp(500, function(){
+                        // $(this).remove(); 
+                    });
+                }, 3000);
+                
+            }
+        }
+
+    ///////////////////////////////////////////////////////////////////
+
+        chatSocket.onopen = function (e) {
+          console.log ("open chatSocket: ", e); 
+        }
+        chatSocket.onerror = function (e) {
+          console.log ("error chatSocket: ", e)
+        }
+        chatSocket.onclose = function (e) {
+          console.log ("close chatSocket: ", e)
+        }
+    ///////////////////////////////////////////////////////////////////
+
+    function getTime(msg_time) {
+        if (msg_time) {
+            // define as Date so we can convert to acceptable date time format (with out letter T, ex. 2020-10-10T06:50:14.751 )
+            temp = new Date(msg_time); 
+
+            // suffix UTC so it will render as local time when it use toLocalString
+            var today = new Date(`${temp.toLocaleString()} UTC`); 
+        } else {
+            var today = new Date();
+        }
+
+        // format & render to local time
+        let time = today.toLocaleString([], { hour: '2-digit', minute: '2-digit' });
+        return time
+    }
+
+    function showDatesWeekDays(date_created) {
+        // add the newly created element and its content into the DOM 
+        
+        dt = new Date(date_created)
+
+        if (!tempDaysWeekdays.includes(dt.toLocaleDateString())) {
+            let newDiv = document.createElement("div"); 
+            let currentDiv = document.getElementById("new-message-chat"); 
+            let parentDiv = currentDiv.parentNode;
+            let days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']; 
+
+            if (dt.toDateString() == new Date().toDateString()) {
+                // display TODAY in message
+                date_weekday = 'TODAY';
+            } else if(dt > getDateBefore()) {
+                // display week day in message
+                date_weekday = days[dt.getDay()].toUpperCase()
+            } else {
+                // display date in message
+                date_weekday = dt.toLocaleDateString();
+            }
+
+            newDiv.style.display = "grid";
+            newDiv.innerHTML = `<div class="date_weekday">${date_weekday}</div>`
+            parentDiv.insertBefore(newDiv, currentDiv); 
+
+            tempDaysWeekdays.push(dt.toLocaleDateString())
+        }
+
+    }
+    
+    function getDateBefore(days=7) {
+        // calculate the last 7 days date
+        // 7 (days) * 24 (hours) * 60 (minutes) * 60 (seconds) * 1000 (milliseconds ) = 604800000 or 7 days in milliseconds.                
+        daysInMs= days * 24 * 60 * 60 * 1000
+        return new Date(Date.now() - daysInMs)
+    }
+    
+    </script>
+</body>
+
+</html>

@@ -28,6 +28,6 @@ def room(request, room_name):
     if request.user.is_authenticated and not request.user.groups.filter(id=group.id).exists():
         group.user_set.add(request.user)
 
-    return render(request, 'chat.html', context)    
+    return render(request, 'chatroom3.html', context)    
 
     
